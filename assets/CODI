@@ -1,0 +1,366 @@
+import pygame
+import sys
+import random
+
+pygame.init()
+
+WIDTH, HEIGHT = 800, 400
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Mario Bros")
+clock = pygame.time.Clock()
+
+# Colores
+AZUL_CIELO = (135, 206, 235)
+AZUL_OSCURO = (30, 60, 90)
+VERDE = (34, 139, 34)
+DORADO = (255, 215, 0)
+BLANCO = (255, 255, 255)
+NEGRO = (0, 0, 0)
+MORADO = (123, 104, 238)
+ROJO_OSCURO = (139, 0, 0)
+
+level_colors = [
+    ((135, 206, 235), (34, 139, 34)),
+    ((30, 60, 90), (255, 215, 0)),
+    ((123, 104, 238), (139, 0, 0)),
+    ((0, 0, 0), (255, 255, 255)),
+    ((70, 130, 180), (210, 105, 30)),
+    ((255, 228, 225), (199, 21, 133)),
+    ((32, 178, 170), (255, 140, 0)),
+    ((245, 245, 220), (160, 82, 45)),
+    ((176, 224, 230), (139, 69, 19)),
+    ((240, 255, 255), (0, 128, 128)),
+]
+
+font = pygame.font.SysFont(None, 36)
+
+def prepare_image(image, target_size=(40, 50)):
+    image = image.convert_alpha()
+    bbox = image.get_bounding_rect()
+    cropped = image.subsurface(bbox)
+    scale_ratio = target_size[1] / cropped.get_height()
+    new_width = int(cropped.get_width() * scale_ratio)
+    scaled = pygame.transform.smoothscale(cropped, (new_width, target_size[1]))
+    final_surface = pygame.Surface(target_size, pygame.SRCALPHA)
+    rect = scaled.get_rect(center=(target_size[0] // 2, target_size[1] // 2))
+    final_surface.blit(scaled, rect)
+    return final_surface
+
+# Cargar música y sonidos
+try:
+    pygame.mixer.music.load('assets/jocmusica.mp3')
+    pygame.mixer.music.set_volume(0.5)
+    pygame.mixer.music.play(-1)
+
+    sonido_pasos = pygame.mixer.Sound('assets/pas2.mp3')
+    sonido_salto = pygame.mixer.Sound('assets/salt2.mp3')
+except pygame.error as e:
+    print("Error al cargar audio:", e)
+    sonido_pasos = None
+    sonido_salto = None
+
+personajes = []
+try:
+    nombres_archivos = [
+        'pers1.png', 'pers2.png', 'pers33.png', 'pers5.png', 'pers6.png',
+        'pers7.png', 'pers8.png', 'pers9.png', 'pers10.png'
+    ]
+    for nombre in nombres_archivos:
+        img = pygame.image.load(f'assets/{nombre}')
+        personajes.append(prepare_image(img))
+
+    boss_image_raw = pygame.image.load('assets/boss1.png')
+    boss_image = prepare_image(boss_image_raw, (40, 50))
+except pygame.error as e:
+    print("Error al cargar las imágenes:", e)
+    sys.exit(1)
+
+player = pygame.Rect(100, 300, 40, 50)
+y_speed = 0
+is_jumping = False
+jump_count = 0
+is_dropping = False
+gravity = 0.5
+jump_force = -10
+facing_right = True
+
+boss = pygame.Rect(WIDTH - 150, HEIGHT - 30 - 50, 40, 50)
+boss_speed = 1.5
+boss_direction = -1
+boss_y_speed = 0
+boss_is_jumping = False
+boss_gravity = 0.5
+boss_jump_force = -9
+
+game_state = "menu"
+total_coins = 0
+current_level = 1
+MAX_LEVELS = 10
+selected_character = 0
+stats_coins = {}
+
+try:
+    estrella_img = pygame.image.load('assets/estrella.png')
+    estrella_img = prepare_image(estrella_img, (20, 20))
+except pygame.error as e:
+    print("Error al cargar la imagen de la estrella:", e)
+    estrella_img = None
+
+class Estrella:
+    def __init__(self):
+        self.rect = pygame.Rect(random.randint(0, WIDTH - 20), 0, 20, 20)
+        self.speed = random.uniform(1, 2)
+
+    def update(self):
+        self.rect.y += self.speed
+
+    def draw(self, surface):
+        if estrella_img:
+            surface.blit(estrella_img, self.rect)
+
+    def is_off_screen(self):
+        return self.rect.top > HEIGHT
+
+estrellas = []
+
+def generate_level(level):
+    platforms = []
+    coins = []
+    base_y = 350
+    spacing = 100
+    for i in range(3):
+        x = random.randint(100, 600)
+        y = base_y - i * spacing
+        w = random.randint(100, 200)
+        platforms.append(pygame.Rect(x, y, w, 20))
+        coins.append(pygame.Rect(x + w // 2, y - 20, 15, 15))
+    platforms.append(pygame.Rect(0, HEIGHT - 30, WIDTH, 30))
+    return {"platforms": platforms, "coins": coins}
+
+def place_characters_apart(min_distance=100):
+    global player, boss
+    attempts = 0
+    while True:
+        attempts += 1
+        player.x = random.randint(50, WIDTH // 3)
+        player.y = 300
+        boss.x = random.randint(WIDTH * 2 // 3, WIDTH - boss.width)
+        boss.y = HEIGHT - 80
+        if abs(player.x - boss.x) >= min_distance or attempts > 10:
+            break
+
+level_data = generate_level(current_level)
+platforms = level_data["platforms"]
+coins = level_data["coins"]
+
+def draw_text(text, x, y, size=36, color=BLANCO, center=False):
+    fuente = pygame.font.SysFont(None, size)
+    texto = fuente.render(text, True, color)
+    rect = texto.get_rect(center=(x, y)) if center else (x, y)
+    screen.blit(texto, rect)
+
+def draw_menu():
+    screen.fill(AZUL_OSCURO)
+    draw_text("Mario Bros", WIDTH // 2, 80, size=72, center=True)
+    draw_text("Elige tu personaje:", WIDTH // 2, 140, center=True)
+    spacing = WIDTH // (len(personajes) + 1)
+    for i, img in enumerate(personajes):
+        x = spacing * (i + 1) - img.get_width() // 2
+        screen.blit(img, (x, 180))
+    draw_text("[1] a [9] para elegir", WIDTH // 2, 270, 28, center=True)
+    draw_text(f"Monedas: {total_coins}", WIDTH // 2, 320, size=28, color=BLANCO, center=True)
+    try:
+        logo = pygame.image.load('assets/logo2.png')
+        logo = pygame.transform.scale(logo, (200, 100))
+        screen.blit(logo, (WIDTH - 220, 20))
+    except pygame.error as e:
+        print("Error al cargar el logo:", e)
+
+def draw_game():
+    global y_speed, is_jumping, jump_count, total_coins, game_state, current_level, platforms, coins
+    global facing_right, player, boss, boss_direction, is_dropping, boss_y_speed, boss_is_jumping, estrellas
+
+    bg_color, platform_color = level_colors[min(current_level - 1, len(level_colors) - 1)]
+    screen.fill(bg_color)
+
+    keys = pygame.key.get_pressed()
+    moving = False
+    if keys[pygame.K_LEFT]:
+        player.x = max(0, player.x - 5)
+        facing_right = False
+        moving = True
+    if keys[pygame.K_RIGHT]:
+        player.x = min(WIDTH - player.width, player.x + 5)
+        facing_right = True
+        moving = True
+    if keys[pygame.K_DOWN]:
+        is_dropping = True
+    else:
+        is_dropping = False
+
+    if moving and sonido_pasos and player.bottom >= HEIGHT:
+        sonido_pasos.play()
+
+    y_speed += gravity
+    player.y += y_speed
+    player.y = max(0, player.y)
+
+    for p in platforms:
+        pygame.draw.rect(screen, platform_color, p)
+        if player.colliderect(p) and y_speed > 0 and not is_dropping:
+            player.bottom = p.top
+            y_speed = 0
+            is_jumping = False
+            jump_count = 0
+
+    if player.bottom >= HEIGHT:
+        player.bottom = HEIGHT
+        y_speed = 0
+        is_jumping = False
+        jump_count = 0
+
+    img = personajes[selected_character]
+    if not facing_right:
+        img = pygame.transform.flip(img, True, False)
+    screen.blit(img, player)
+
+    if current_level == 1:
+        boss.x += boss_speed * boss_direction
+        if boss.left <= 0:
+            boss_direction = 1
+        elif boss.right >= WIDTH:
+            boss_direction = -1
+    else:
+        if boss.x < player.x:
+            boss.x = min(WIDTH - boss.width, boss.x + boss_speed)
+            boss_direction = 1
+        elif boss.x > player.x:
+            boss.x = max(0, boss.x - boss_speed)
+            boss_direction = -1
+
+    if player.y + 30 < boss.y and not boss_is_jumping:
+        boss_y_speed = boss_jump_force
+        boss_is_jumping = True
+
+    boss_y_speed += boss_gravity
+    boss.y += boss_y_speed
+    for p in platforms:
+        if boss.colliderect(p) and boss_y_speed > 0:
+            boss.bottom = p.top
+            boss_y_speed = 0
+            boss_is_jumping = False
+
+    if boss.bottom > HEIGHT:
+        boss.bottom = HEIGHT
+        boss_y_speed = 0
+        boss_is_jumping = False
+
+    boss_img = boss_image if boss_direction < 0 else pygame.transform.flip(boss_image, True, False)
+    screen.blit(boss_img, boss)
+
+    if random.random() < 0.02:
+        estrellas.append(Estrella())
+    for estrella in estrellas[:]:
+        estrella.update()
+        estrella.draw(screen)
+        if estrella.rect.colliderect(player):
+            total_coins = max(0, total_coins - 1)
+            estrellas.remove(estrella)
+        elif estrella.is_off_screen():
+            estrellas.remove(estrella)
+
+    for coin in coins:
+        if coin.width > 0 and player.colliderect(coin):
+            coin.width = 0
+            total_coins += 1
+        if coin.width > 0:
+            pygame.draw.ellipse(screen, DORADO, coin)
+
+    draw_text(f"Monedas: {total_coins}", 10, 10, 28)
+
+    if player.colliderect(boss):
+        stats_coins[current_level] = total_coins
+        game_state = "game_over"
+
+    if player.x > WIDTH - 50:
+        stats_coins[current_level] = total_coins
+        current_level += 1
+        if current_level > MAX_LEVELS:
+            game_state = "credits"
+        else:
+            place_characters_apart()
+            level_data = generate_level(current_level)
+            platforms[:] = level_data["platforms"]
+            coins[:] = level_data["coins"]
+
+def draw_game_over():
+    screen.fill(ROJO_OSCURO)
+    draw_text("Juego Terminado", WIDTH // 2, HEIGHT // 2 - 40, size=72, center=True)
+    draw_text("Pulsa ENTER para ver los créditos", WIDTH // 2, HEIGHT // 2 + 20, size=28, center=True)
+
+def draw_credits():
+    screen.fill((20, 20, 60))  # Fondo oscuro
+    draw_text("Mario Bros", WIDTH // 2, HEIGHT // 6, size=72, center=True)
+    draw_text("Gracias por jugar", WIDTH // 2, HEIGHT // 3, size=36, center=True)
+    draw_text("CODIG FET PER JOEL , LAIA I CHATGPT", WIDTH // 2, HEIGHT // 3 + 50, size=28, center=True)
+    draw_text("GRÀFICS FET PER JOEL I LAIA", WIDTH // 2, HEIGHT // 3 + 90, size=28, center=True)
+    draw_text("POSA MÚSICA: jocmusica.mp3", WIDTH // 2, HEIGHT // 3 + 130, size=28, center=True)
+    draw_text("I SONS: pas2.mp3 i salt.mp3", WIDTH // 2, HEIGHT // 3 + 170, size=28, center=True)
+    draw_text("Prem ENTER per tornar al menú", WIDTH // 2, HEIGHT - 50, size=24, center=True)
+
+def main():
+    global game_state, total_coins, current_level, stats_coins, estrellas, platforms, coins, selected_character
+    global y_speed, is_jumping, jump_count
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                if game_state == "menu":
+                    if pygame.K_1 <= event.key <= pygame.K_9:
+                        selected_character = event.key - pygame.K_1
+                        place_characters_apart()
+                        game_state = "game"
+                elif game_state == "game":
+                    if event.key == pygame.K_UP:
+                        if jump_count < 2:
+                            y_speed = jump_force
+                            is_jumping = True
+                            jump_count += 1
+                            if sonido_salto:
+                                sonido_salto.play()
+                    # Eliminamos la acción del ENTER en juego para que no vaya a créditos aquí
+                elif game_state == "game_over":
+                    if event.key == pygame.K_RETURN:
+                        game_state = "credits"
+                elif game_state == "credits":
+                    if event.key == pygame.K_RETURN:
+                        total_coins = 0
+                        current_level = 1
+                        estrellas.clear()
+                        stats_coins.clear()
+                        level_data = generate_level(current_level)
+                        platforms[:] = level_data["platforms"]
+                        coins[:] = level_data["coins"]
+                        place_characters_apart()
+                        game_state = "menu"
+
+        if game_state == "menu":
+            draw_menu()
+        elif game_state == "game":
+            draw_game()
+        elif game_state == "game_over":
+            draw_game_over()
+        elif game_state == "credits":
+            draw_credits()
+
+        pygame.display.flip()
+        clock.tick(60)
+
+if __name__ == "__main__":
+    main()
