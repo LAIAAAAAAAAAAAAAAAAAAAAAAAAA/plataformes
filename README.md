@@ -1,4 +1,4 @@
-# plataformes
+# JOC
 🎮 OBJECTIU DEL JOC Controlar un personatge (tipus Mario).
 
 Recollir monedes en cada nivell.
