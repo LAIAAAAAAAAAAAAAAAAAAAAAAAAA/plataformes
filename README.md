@@ -1,5 +1,5 @@
 # JOC
-🎮 JOC: Mario Bros 
+🎮 JOC: Mario: Misión Épica
 
 OBJECTIU DEL JOC:
 - Controlar un personatge (tipus Mario).
@@ -32,4 +32,4 @@ OBJECTIU DEL JOC:
 - La música i els sons de passos/salt es carreguen al començament.
 - Es guarda la quantitat de monedes recollides per nivell en un diccionari (stats_coins).
 - Si s'arriba al nivell 10 i es completa, es mostra una pantalla de crèdits.
-"""
+
