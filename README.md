@@ -1,60 +1,36 @@
 # plataformes
-🎮 OBJETIVO DEL JUEGO
-Controlar a un personaje (tipo Mario).
+🎮 OBJECTIU DEL JOC Controlar un personatge (tipus Mario).
 
-Recolectar monedas en cada nivel.
+Recollir monedes en cada nivell.
 
-Esquivar al jefe que te persigue.
+Evitar el enemig que et persegueix.
 
-Llegar al borde derecho de la pantalla para pasar al siguiente nivel.
+Arribar al marge dret de la pantalla per passar al següent nivell.
 
-Sobrevivir hasta el nivel 10 (luego aparecen los créditos).
+Sobreviure fins al nivell 10 (llavors apareixen els crèdits).
 
-🧍 SELECCIÓN DE PERSONAJE
-En el menú principal, puedes elegir tu personaje presionando una tecla del 1 al 9.
+🧍 SELECCIÓ DE PERSONATGE Al menú principal, pots triar el teu personatge prement una tecla del 1 al 9.
 
-Cada número representa un sprite diferente.
+Cada número representa un personatge diferent.
 
-Una vez elegido, comienza el juego.
+Un cop escollit, comença el joc.
 
-🎮 CONTROLES
-← / →: Moverte a la izquierda o derecha.
+🕹️ MECÀNIQUES DEL JOC Moviment del personatge: Pots córrer, saltar i fer doble salt. Plataformes: Hi ha plataformes on et pots parar, saltar entre elles o caure. Monedes: Hi ha 3 monedes per nivell. En tocar-les, guanyes +1 moneda. Estrelles que cauen: Si una estrella et toca, perds una moneda.
 
-↑: Saltar (doble salto disponible).
+Enemig:
 
-↓: Te deja caer de las plataformas si estás encima.
+En el nivell 1, el enemig es mou d'esquerra a dreta sense seguir-te.
 
-ENTER: Avanza en algunos menús (como pasar a créditos).
+A partir del nivell 2, el enemig persegueix el jugador activament.
 
-ESC: Sale del juego.
+Si el enemig et toca, perds i apareix la pantalla de “Joc Acabat”. Passar de nivell: Arriba al marge dret de la pantalla per passar de nivell.
 
-🕹️ MECÁNICAS DEL JUEGO
-Movimiento del personaje: Puedes correr, saltar y hacer doble salto.
+Fins a 10 nivells. Si els superes tots, apareixen els crèdits del joc.
 
-Plataformas: Hay plataformas donde puedes pararte, saltar entre ellas o dejarlas caer.
+📊 ALTRES DETALLS Cada nivell té un color de fons i de plataformes diferent.
 
-Monedas: Hay 3 monedas por nivel. Al tocarlas, ganas +1 moneda.
+La música i els sons de passos/salt es carreguen al començament.
 
-Estrellas que caen: Si una estrella te toca, pierdes una moneda.
+Es guarda la quantitat de monedes recollides per nivell en un diccionari (stats_coins).
 
-Boss:
-
-En el nivel 1, el jefe se mueve de izquierda a derecha sin seguirte.
-
-Desde el nivel 2 en adelante, el jefe persigue al jugador activamente.
-
-Si el jefe te toca, pierdes y aparece la pantalla de “Juego Terminado”.
-
-Pasar de nivel: Llega al borde derecho de la pantalla para pasar de nivel.
-
-Hasta 10 niveles. Si los pasas todos, aparecen los créditos del juego.
-
-📊 OTROS DETALLES
-Cada nivel tiene un color de fondo y de plataformas diferente.
-
-La música y los sonidos de pasos/salto se cargan al inicio.
-
-Guarda la cantidad de monedas recogidas por nivel en un diccionario (stats_coins).
-
-Si se alcanza el nivel 10 y se completa, se muestra una pantalla de créditos.
-
+Si s'arriba al nivell 10 i es completa, es mostra una pantalla de crèdits.
